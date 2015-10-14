@@ -50,8 +50,6 @@ int FullScreenWindowed = 0;
 
 HWND g_hWnd = NULL;
 
-#define EQMAC
-
 #ifdef EQMAC
 DWORD o_ProcessGameEvents = 0x0055AFE2;
 DWORD o_EverQuest_WndProc = 0x0055A4F4;
