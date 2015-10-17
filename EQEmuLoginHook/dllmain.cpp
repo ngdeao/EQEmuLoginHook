@@ -248,6 +248,9 @@ int WINAPI EverQuest_wndProc_Hook(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lPa
 			}
 		}
 
+		if (Msg == 0x4642)
+			return 0;
+
 		//if (WM_HOTKEY == Msg)
 		//{
 		//	HWND oWnd = FindWindowFromProcess((HANDLE)GetCurrentProcess());
@@ -395,6 +398,8 @@ char g_wTitle[MAX_PATH];
 std::string winTitle;
 int XOffset = 0;
 int YOffset = 0;
+int X = 0;
+int Y = 0;
 bool registerme = false;
 
 HWND WINAPI CreateWindowExAHook(DWORD     dwExStyle,
@@ -429,6 +434,17 @@ HWND WINAPI CreateWindowExAHook(DWORD     dwExStyle,
 	if (FullScreenWindowed)
 		tmpStyle &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZE | WS_MAXIMIZE | WS_SYSMENU);
 
+	int X1 = atoi(GetAndWriteKeyValueString("Client1X", "0").c_str());
+	int X2 = atoi(GetAndWriteKeyValueString("Client2X", "0").c_str());
+	int X3 = atoi(GetAndWriteKeyValueString("Client3X", "0").c_str());
+	int X4 = atoi(GetAndWriteKeyValueString("Client4X", "0").c_str());
+
+	int Y1 = atoi(GetAndWriteKeyValueString("Client1Y", "0").c_str());
+	int Y2 = atoi(GetAndWriteKeyValueString("Client2Y", "0").c_str());
+	int Y3 = atoi(GetAndWriteKeyValueString("Client3Y", "0").c_str());
+	int Y4 = atoi(GetAndWriteKeyValueString("Client4Y", "0").c_str());
+
+
 	if (g_hWnd == 0)
 	{
 
@@ -447,10 +463,12 @@ HWND WINAPI CreateWindowExAHook(DWORD     dwExStyle,
 		int YOffset3 = atoi(GetAndWriteKeyValueString("Client3YOffset", "0").c_str());
 		int YOffset4 = atoi(GetAndWriteKeyValueString("Client4YOffset", "0").c_str());
 
+
 		tmpTitle = win1Title;
 		int XOffset = XOffset1;
 		int YOffset = YOffset1;
-
+		X = X1;
+		Y = Y1;
 		bool bFoundFree = false;
 
 		if (!FindWindowA(NULL, win1Title.c_str()) && !bFoundFree)
@@ -459,6 +477,8 @@ HWND WINAPI CreateWindowExAHook(DWORD     dwExStyle,
 			YOffset = YOffset1;
 			winTitle = win1Title;
 			tmpTitle = win1Title;
+			X = X1;
+			Y = Y1;
 			bFoundFree = true;
 		}
 
@@ -468,6 +488,8 @@ HWND WINAPI CreateWindowExAHook(DWORD     dwExStyle,
 			YOffset = YOffset2;
 			tmpTitle = win2Title;
 			winTitle = win2Title;
+			X = X2;
+			Y = Y2;
 			bFoundFree = true;
 		}
 
@@ -477,6 +499,8 @@ HWND WINAPI CreateWindowExAHook(DWORD     dwExStyle,
 			YOffset = YOffset3;
 			tmpTitle = win3Title;
 			winTitle = win3Title;
+			X = X3;
+			Y = Y3;
 			bFoundFree = true;
 		}
 
@@ -486,14 +510,16 @@ HWND WINAPI CreateWindowExAHook(DWORD     dwExStyle,
 			YOffset = YOffset4;
 			tmpTitle = win4Title;
 			winTitle = win4Title;
+			X = X4;
+			Y = X4;
 			bFoundFree = true;
 		}
-		g_hWnd = return_CreateWindowExA(dwExStyle, lpClassName, tmpTitle.c_str(), tmpStyle, XOffset, YOffset, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+		g_hWnd = return_CreateWindowExA(dwExStyle, lpClassName, tmpTitle.c_str(), tmpStyle, XOffset, YOffset, X, Y, hWndParent, hMenu, hInstance, lpParam);
 	}
 	else
 	{
 		tmpTitle.append("-LS");
-		g_hWnd = return_CreateWindowExA(dwExStyle, lpClassName, tmpTitle.c_str(), tmpStyle, XOffset, YOffset, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+		g_hWnd = return_CreateWindowExA(dwExStyle, lpClassName, tmpTitle.c_str(), tmpStyle, XOffset, YOffset, X, Y, hWndParent, hMenu, hInstance, lpParam);
 	}
 
 	return g_hWnd;
@@ -527,8 +553,11 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 
 
 #ifdef EQMAC
+		//TODO: Move binary patches over.
+
 #else
 		PatchBytes((void*)0x00409539, "\x00", 1);
+		PatchBytes((void*)0x004923E0, "\x90\x90\xEB\x63", 4);
 		return_SetWindowPos = (SetWindowPos_t)DetourFunction((PBYTE)GetProcAddress(GetModuleHandleA("user32.dll"), "SetWindowPos"), (PBYTE)SetWindowPosHook);
 #endif
 
