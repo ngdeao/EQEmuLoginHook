@@ -248,9 +248,6 @@ int WINAPI EverQuest_wndProc_Hook(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lPa
 			}
 		}
 
-		if (Msg == 0x4642)
-			return 0;
-
 		//if (WM_HOTKEY == Msg)
 		//{
 		//	HWND oWnd = FindWindowFromProcess((HANDLE)GetCurrentProcess());
@@ -275,8 +272,10 @@ int WINAPI EverQuest_wndProc_Hook(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lPa
 			{
 				SetForegroundWindow(hwnd);
 				SetFocus(hwnd);
-				if(!FullScreenWindowed)
+				if (!FullScreenWindowed)
 					return_ShowWindow(hwnd, 1);
+				else
+					return_ShowWindow(hwnd, 3);
 #ifdef EQMAC
 				((int(__cdecl*)())0x0055AFB3)();
 #else
@@ -369,10 +368,13 @@ UINT uFlags)
 
 bool WINAPI ShowWindowHook(HWND hWnd, int nCmdShow)
 {
-	if (nCmdShow == 3)
+	if (nCmdShow == 3 || !FullScreenWindowed)
 	{
 		return return_ShowWindow(hWnd, 1);
 	}
+
+	if (FullScreenWindowed && nCmdShow == 1)
+		return return_ShowWindow(hWnd, 3);
 
 	return return_ShowWindow(hWnd, nCmdShow);
 }
@@ -434,15 +436,15 @@ HWND WINAPI CreateWindowExAHook(DWORD     dwExStyle,
 	if (FullScreenWindowed)
 		tmpStyle &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZE | WS_MAXIMIZE | WS_SYSMENU);
 
-	int X1 = atoi(GetAndWriteKeyValueString("Client1X", "0").c_str());
-	int X2 = atoi(GetAndWriteKeyValueString("Client2X", "0").c_str());
-	int X3 = atoi(GetAndWriteKeyValueString("Client3X", "0").c_str());
-	int X4 = atoi(GetAndWriteKeyValueString("Client4X", "0").c_str());
+	int X1 = atoi(GetAndWriteKeyValueString("Client1X", "800").c_str());
+	int X2 = atoi(GetAndWriteKeyValueString("Client2X", "800").c_str());
+	int X3 = atoi(GetAndWriteKeyValueString("Client3X", "800").c_str());
+	int X4 = atoi(GetAndWriteKeyValueString("Client4X", "800").c_str());
 
-	int Y1 = atoi(GetAndWriteKeyValueString("Client1Y", "0").c_str());
-	int Y2 = atoi(GetAndWriteKeyValueString("Client2Y", "0").c_str());
-	int Y3 = atoi(GetAndWriteKeyValueString("Client3Y", "0").c_str());
-	int Y4 = atoi(GetAndWriteKeyValueString("Client4Y", "0").c_str());
+	int Y1 = atoi(GetAndWriteKeyValueString("Client1Y", "600").c_str());
+	int Y2 = atoi(GetAndWriteKeyValueString("Client2Y", "600").c_str());
+	int Y3 = atoi(GetAndWriteKeyValueString("Client3Y", "600").c_str());
+	int Y4 = atoi(GetAndWriteKeyValueString("Client4Y", "600").c_str());
 
 
 	if (g_hWnd == 0)
@@ -514,12 +516,20 @@ HWND WINAPI CreateWindowExAHook(DWORD     dwExStyle,
 			Y = X4;
 			bFoundFree = true;
 		}
-		g_hWnd = return_CreateWindowExA(dwExStyle, lpClassName, tmpTitle.c_str(), tmpStyle, XOffset, YOffset, X, Y, hWndParent, hMenu, hInstance, lpParam);
+#ifndef EQMAC
+		g_hWnd = return_CreateWindowExA(dwExStyle, lpClassName, tmpTitle.c_str(), tmpStyle, x, y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+#else
+		g_hWnd = return_CreateWindowExA(dwExStyle, lpClassName, tmpTitle.c_str(), tmpStyle, XOffset, YOffset, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+#endif
 	}
 	else
 	{
 		tmpTitle.append("-LS");
-		g_hWnd = return_CreateWindowExA(dwExStyle, lpClassName, tmpTitle.c_str(), tmpStyle, XOffset, YOffset, X, Y, hWndParent, hMenu, hInstance, lpParam);
+#ifndef EQMAC
+		g_hWnd = return_CreateWindowExA(dwExStyle, lpClassName, tmpTitle.c_str(), tmpStyle, x, y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+#else
+		g_hWnd = return_CreateWindowExA(dwExStyle, lpClassName, tmpTitle.c_str(), tmpStyle, XOffset, YOffset, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+#endif
 	}
 
 	return g_hWnd;
