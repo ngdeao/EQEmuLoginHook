@@ -4,6 +4,7 @@
 #include <WinSock.h>
 #include <string>
 #include <WinUser.h>
+#include "gammaramp.h"
 #pragma comment (lib, "detours.lib")
 #pragma comment(lib,"wsock32.lib")
 void ApplyHooksToModule(LPCSTR moduleName);
@@ -19,6 +20,9 @@ typedef LRESULT (__stdcall* EverQuest_wndProc_t)(HWND hWnd, UINT Msg, WPARAM wPa
 EverQuest_wndProc_t return_EverQuest_WndProc;
 typedef LONG (__stdcall* SetWindowLong_t)(HWND hWnd, int nIndex, LONG dwNewLong);
 SetWindowLong_t return_SetWindowLong;
+
+typedef int(__stdcall* SetGamma_t)(float a1);
+SetGamma_t return_SetGamma;
 
 typedef BOOL (__stdcall* SetWindowPos_t)(_In_     HWND hWnd,
 	_In_opt_ HWND hWndInsertAfter,
@@ -55,12 +59,13 @@ DWORD o_ProcessGameEvents = 0x0055AFE2;
 DWORD o_EverQuest_WndProc = 0x0055A4F4;
 DWORD o_CEverQuest = 0x00809478;
 DWORD o_DxFlushKeyboard = 0x0055AFB3;
+DWORD o_AdjustGamma = 0x004A94F5;
 #else //trilogy
 DWORD o_ProcessGameEvents = 0x004EB0E0;
 DWORD o_EverQuest_WndProc = 0x004EA74E;
 DWORD o_CEverQuest = 0x006EFE2C;
 DWORD o_DxFlushKeyboard = 0x0055AFB3;
-
+DWORD o_AdjustGamma = 0x0040AF4F;
 #endif
 
 
@@ -270,12 +275,12 @@ int WINAPI EverQuest_wndProc_Hook(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lPa
 			HWND hwnd = FindWindowFromProcess((HANDLE)GetCurrentProcess());
 			if (wParam)
 			{
-				SetForegroundWindow(hwnd);
-				SetFocus(hwnd);
 				if (!FullScreenWindowed)
 					return_ShowWindow(hwnd, 1);
 				else
 					return_ShowWindow(hwnd, 3);
+
+				UpdateWindow(hwnd);
 #ifdef EQMAC
 				((int(__cdecl*)())0x0055AFB3)();
 #else
@@ -295,7 +300,7 @@ int WINAPI EverQuest_wndProc_Hook(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lPa
 				while (ShowCursor(TRUE) < 0);
 			}
 
-			return 0;
+			return return_EverQuest_WndProc(hWnd, Msg, wParam, lParam);
 		}
 	}
 
@@ -327,8 +332,6 @@ int __cdecl ProcessGameEvents_Hook() {  //55AFB3
 
 	if (!g_bFocus)
 	{
-		SetForegroundWindow(hwnd);
-		SetFocus(hwnd);
 #ifdef EQMAC
 		((int(__cdecl*)())0x0055AFB3)();
 #else
@@ -352,6 +355,15 @@ bool WINAPI SetWindowTextHook(HWND hWnd, LPCSTR lpString)
 	return 1;
 }
 
+int __stdcall SetGammaHook(float a1)
+{
+	CGammaRamp ramp;
+	WORD UseGamma = atoi(GetAndWriteKeyValueString("UseGammaSlider", "1").c_str());
+	if(UseGamma)
+		ramp.SetBrightness(NULL, (int)(a1 * 100.f));
+	return 0;
+}
+
 #ifdef EQMAC
 #else
 bool WINAPI SetWindowPosHook(HWND hWnd,
@@ -368,13 +380,17 @@ UINT uFlags)
 
 bool WINAPI ShowWindowHook(HWND hWnd, int nCmdShow)
 {
-	if (nCmdShow == 3 || !FullScreenWindowed)
+
+	if (nCmdShow == 0)
+		return return_ShowWindow(hWnd, 0);
+
+	if (FullScreenWindowed)
+		return return_ShowWindow(hWnd, 3);
+
+	if (nCmdShow == 3 && !FullScreenWindowed)
 	{
 		return return_ShowWindow(hWnd, 1);
 	}
-
-	if (FullScreenWindowed && nCmdShow == 1)
-		return return_ShowWindow(hWnd, 3);
 
 	return return_ShowWindow(hWnd, nCmdShow);
 }
@@ -560,7 +576,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 		return_ShowWindow = (ShowWindow_t)DetourFunction((PBYTE)GetProcAddress(GetModuleHandleA("user32.dll"), "ShowWindow"), (PBYTE)ShowWindowHook);
 		return_SetWindowLong = (SetWindowLong_t)DetourFunction((PBYTE)GetProcAddress(GetModuleHandleA("user32.dll"), "SetWindowLongA"), (PBYTE)SetWindowLongHook);
 		DetourFunction((PBYTE)GetProcAddress(GetModuleHandleA("user32.dll"),"SetWindowTextA"), (PBYTE)SetWindowTextHook);
-
+		return_SetGamma = (SetGamma_t)DetourFunction((PBYTE)o_AdjustGamma, (PBYTE)SetGammaHook);
 
 #ifdef EQMAC
 		//TODO: Move binary patches over.
