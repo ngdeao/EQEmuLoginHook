@@ -245,6 +245,11 @@ int WINAPI EverQuest_wndProc_Hook(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lPa
 	if (*(DWORD*)o_CEverQuest)
 	{
 
+		if (WM_WINDOWPOSCHANGED == Msg || WM_WINDOWPOSCHANGING == Msg || WM_NCCALCSIZE == Msg)
+		{
+			return 0;
+		}
+
 		if (WM_SYSCOMMAND == Msg)
 		{
 			if (wParam == SC_MINIMIZE)
