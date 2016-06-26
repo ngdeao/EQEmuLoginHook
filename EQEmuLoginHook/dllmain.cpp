@@ -236,6 +236,14 @@ void ProcessHotkey(int hotKeyID)
 
 }
 
+struct RESOLUTION
+{
+	DWORD width;
+	DWORD height;
+	DWORD refresh;
+	DWORD bpp;
+};
+
 
 int WINAPI EverQuest_wndProc_Hook(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
@@ -284,8 +292,7 @@ int WINAPI EverQuest_wndProc_Hook(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lPa
 					return_ShowWindow(hwnd, 1);
 				else
 					return_ShowWindow(hwnd, 3);
-
-				UpdateWindow(hwnd);
+				
 #ifdef EQMAC
 				((int(__cdecl*)())0x0055AFB3)();
 #else
@@ -312,6 +319,16 @@ int WINAPI EverQuest_wndProc_Hook(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lPa
 	return return_EverQuest_WndProc(hWnd, Msg, wParam, lParam);
 }
 
+bool setResolution = false;
+
+
+
+	DWORD resx =0;
+	DWORD resy = 0;
+	DWORD bpp = 0;
+	DWORD refresh = 0;
+
+
 int __cdecl ProcessGameEvents_Hook() {  //55AFB3
 
 
@@ -323,6 +340,7 @@ int __cdecl ProcessGameEvents_Hook() {  //55AFB3
 	if (!hwnd || hwnd != (HWND)oWnd)
 	{
 		ResetMouseFlags();
+
 #ifdef EQMAC
 		((int (__cdecl*)())0x0055AFB3)();
 #else
@@ -336,7 +354,30 @@ int __cdecl ProcessGameEvents_Hook() {  //55AFB3
 	g_hWnd = oWnd;
 
 	if (!g_bFocus)
-	{
+	{		
+		
+		
+		if(*(DWORD*)(0x007F97D0) != 0 && setResolution == false)
+		{
+
+			DWORD ptr = *(DWORD*)(0x007F97D0);
+			
+			resx = *(DWORD*)(ptr + 0x7A28);
+			resy = *(DWORD*)(ptr + 0x7A2C);
+			bpp = *(DWORD*)(ptr + 0x7A20);
+			refresh = *(DWORD*)(ptr + 0x7A30);
+			setResolution = true;
+		}
+		else
+		{
+			*(DWORD*)0x005FE990 = resx;
+			*(DWORD*)0x005FE994 = resy;
+			*(DWORD*)0x005FE998 = bpp;
+			*(DWORD*)0x0063AE8C = refresh;
+			((int(__cdecl*)())0x0043BBE2)();
+		}
+
+
 #ifdef EQMAC
 		((int(__cdecl*)())0x0055AFB3)();
 #else
